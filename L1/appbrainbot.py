@@ -14,8 +14,8 @@ class AppbrainbotSpider(scrapy.Spider):
 
         #There might be a "/" between the "..com" and the "{0}"
         site = 'https://www.appbrain.com{0}'
-        app = response.css(".browse-app-large.safelink.hover-shadow.hidden-xs::attr(href)").extract() 
-
+        app = response.css(".browse-app-large.safelink.hover-shadow.hidden-xs::attr(href)").extract()
+        
         url_app = []  #List of urls with apps
         desc = [] # A list where each element consists of a list which is the description for each app.
         
@@ -27,7 +27,7 @@ class AppbrainbotSpider(scrapy.Spider):
 
              #Load 
              if url is not None:
-                 fetch(url)
+                 fetch(url) # This is probably wrong.
                 #yield response.follow(url, self.parse)
 
              #Extrac the name, its returned as a string in a list with one element therefore we
@@ -43,7 +43,7 @@ class AppbrainbotSpider(scrapy.Spider):
              # Adds these new url's in to the url_app list.
               
              for new_links in new_app:                 
-                 url_app.append(stie.format(new_link))
+                 url_app.append(site.format(new_link))
 
              # The question now is, will all the url's be unique? Should we do set() on the url
              # or how should we do it? If we use set i assume the url_app would be scrambled
