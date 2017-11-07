@@ -4,8 +4,8 @@ import scrapy
 
 class AppbrainbotSpider(scrapy.Spider):
     name = 'appbrainbot'
-    allowed_domains = ['https://www.appbrain.com/apps/highest-rated']
-    start_urls = ['http://https://www.appbrain.com/apps/highest-rated']
+    allowed_domains = ['https://www.appbrain.com']
+    start_urls = ['https://www.appbrain.com/apps/highest-rated']
     my_urls = []
     app_name = []
 
@@ -20,13 +20,15 @@ class AppbrainbotSpider(scrapy.Spider):
         desc = [] # A list where each element consists of a list which is the description for each app.
         
         for iapp in app:
-            url_app.append() = site.format(iapp)
+            url_app.append(site.format(iapp))
 
         #while len(url_app) < 1000:
-         for url in url_app:
-             
-             if next_page is not None:
-                yield response.follow(next_page, self.parse)
+        for url in url_app:
+
+             #Load 
+             if url is not None:
+                 fetch(url)
+                #yield response.follow(url, self.parse)
 
              #Extrac the name, its returned as a string in a list with one element therefore we
                 #slice the string out with [0]
@@ -36,7 +38,7 @@ class AppbrainbotSpider(scrapy.Spider):
              desc.append(response.css(".app-description-contents::text").extract())
 
              # This is a list of new links to other apps from the app description page.
-             new_app = response.css(".app-tile.hover-shadow::attr(href)").extract():
+             new_app = response.css(".app-tile.hover-shadow::attr(href)").extract()
 
              # Adds these new url's in to the url_app list.
               
@@ -54,5 +56,6 @@ class AppbrainbotSpider(scrapy.Spider):
 
 
  
+        print(app_name)
+        #pass
 
-        pass
