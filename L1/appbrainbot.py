@@ -1,61 +1,80 @@
 # -*- coding: utf-8 -*-
 import scrapy
+import json
+from scrapy import signals
+from scrapy.xlib.pydispatch import dispatcher
+from scrapy.crawler import CrawlerRunner
+from twisted.internet import reactor
 
 
 class AppbrainbotSpider(scrapy.Spider):
     name = 'appbrainbot'
-    allowed_domains = ['https://www.appbrain.com']
+    # allowed_domains = ['https://www.appbrain.com']
     start_urls = ['https://www.appbrain.com/apps/highest-rated']
-    my_urls = []
-    app_name = []
 
-    
+    def __init__(self):
+
+        super().__init__()
+
+        self.app_name = {}
+        self.app_count = 0
+        self.page_count = 0
+        self.site = 'https://www.appbrain.com{0}'
+
+        dispatcher.connect(self.spider_closed,signals.spider_closed)
+
+
+    def start_requests(self):
+        print("start_request")
+        yield scrapy.Request(url = self.start_urls[0], callback = self.parse)
+
+
+
     def parse(self, response):
 
-        #There might be a "/" between the "..com" and the "{0}"
-        site = 'https://www.appbrain.com{0}'
+        print("parse")
+        print(response.url)
         app = response.css(".browse-app-large.safelink.hover-shadow.hidden-xs::attr(href)").extract()
-        
-        url_app = []  #List of urls with apps
-        desc = [] # A list where each element consists of a list which is the description for each app.
-        
+        print(app)
+
         for iapp in app:
-            url_app.append(site.format(iapp))
+            print(self.site.format(iapp))
+            self.app_count += 1
+            yield scrapy.Request(url = self.site.format(iapp).strip(), callback = self.parse_app)
 
-        #while len(url_app) < 1000:
-        for url in url_app:
+        if self.app_count < 20:
+            print("parse if else")
+            self.page_count += 1
+            url ="/apps/popular/?o={0}".format(self.page_count * 10)
 
-             #Load 
-             if url is not None:
-                 fetch(url) # This is probably wrong.
-                #yield response.follow(url, self.parse)
-
-             #Extrac the name, its returned as a string in a list with one element therefore we
-                #slice the string out with [0]
-             app_name.append(response.css(".bottommargin-s::text").extract()[0])
-             
-             #Extracts the description 
-             desc.append(response.css(".app-description-contents::text").extract())
-
-             # This is a list of new links to other apps from the app description page.
-             new_app = response.css(".app-tile.hover-shadow::attr(href)").extract()
-
-             # Adds these new url's in to the url_app list.
-              
-             for new_links in new_app:                 
-                 url_app.append(site.format(new_link))
-
-             # The question now is, will all the url's be unique? Should we do set() on the url
-             # or how should we do it? If we use set i assume the url_app would be scrambled
-             # since set is not sorted. This would lead to us maybe visiting the same page twice and therefore
-             # creating duplicates.
-
-             
-             
-             
+            yield scrapy.Request(url = self.site.format(url), callback = self.parse)
 
 
- 
-        print(app_name)
-        #pass
+    def parse_app(self, response):
+        print("parse_app")
+        #Extrac the name, its returned as a string in a list with one element therefore we
+        #slice the string out with [0]
+        app_real_name = response.css(".bottommargin-s::text").extract()[0]
 
+        #Extracts the description
+        desc = " ".join(response.css(".app-description-contents::text").extract())
+        #desc.encode("utf8")
+
+        self.app_name[app_real_name] = desc
+
+
+    def spider_closed(self, spider):
+        print(self.app_name)
+        with open("app_desc.json", "w") as file:
+            json.dump(self.app_name, file)
+
+
+def main():
+    runner = CrawlerRunner()
+    d = runner.crawl(AppbrainbotSpider)
+    d.addBoth(lambda _: reactor.stop())
+    reactor.run()
+
+
+if __name__ == "__main__":
+    main()
