@@ -1,13 +1,15 @@
+
+
+
+cats = ["COMMUNICATION","PHOTOGRAPHY", "LIFESTYLE", "PRODUCTIVITY", "SPORTS", "TOOLS”,”ANDROID_WEAR","EVENTS","BUSINESS", "HEALTH_AND_FITNESS"]
+
 # -*- coding: utf-8 -*-
 import scrapy
 import json
-import random
-from time import sleep
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 from scrapy.crawler import CrawlerRunner
 from twisted.internet import reactor
-
 
 
 class AppbrainbotSpider(scrapy.Spider):
@@ -43,13 +45,13 @@ class AppbrainbotSpider(scrapy.Spider):
         for iapp in app:
             print(self.site.format(iapp))
             self.app_count += 1
-
             yield scrapy.Request(url = self.site.format(iapp).strip(), callback = self.parse_app)
 
         if self.app_count < 1000:
             print("parse if else")
             self.page_count += 1
             url ="/apps/popular/?o={0}".format(self.page_count * 10)
+
             yield scrapy.Request(url = self.site.format(url), callback = self.parse)
 
 
