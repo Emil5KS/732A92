@@ -61,7 +61,7 @@ class AppbrainbotSpider(scrapy.Spider):
 
         #Extracts the description
         desc = " ".join(response.css(".app-description-contents::text").extract())
-
+        sleep(5)
         self.app_name[app_real_name] = desc
 
 

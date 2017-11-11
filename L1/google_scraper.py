@@ -1,7 +1,6 @@
 
 
 
-cats = ["COMMUNICATION","PHOTOGRAPHY", "LIFESTYLE", "PRODUCTIVITY", "SPORTS", "TOOLS”,”ANDROID_WEAR","EVENTS","BUSINESS", "HEALTH_AND_FITNESS"]
 
 # -*- coding: utf-8 -*-
 import scrapy
@@ -15,16 +14,18 @@ from twisted.internet import reactor
 class AppbrainbotSpider(scrapy.Spider):
     name = 'appbrainbot'
     # allowed_domains = ['https://www.appbrain.com']
-    start_urls = ['https://www.appbrain.com/apps/highest-rated']
+    start_urls = ['https://play.google.com/store/apps/category/PERSONALIZATION/collection/topselling_free']
 
     def __init__(self):
 
         super().__init__()
 
-        self.app_name = {}
+        self.apps = {}
+        self.apps_url = []
         self.app_count = 0
-        self.page_count = 0
-        self.site = 'https://www.appbrain.com{0}'
+        #self.page_count = 0
+        self.site = "https://play.google.com/store/apps/category/{0}/collection/topselling_free"
+        self.cats = ["COMMUNICATION","PHOTOGRAPHY", "LIFESTYLE", "PRODUCTIVITY", "SPORTS", "TOOLS”,”ANDROID_WEAR","EVENTS","BUSINESS", "HEALTH_AND_FITNESS"]
 
         dispatcher.connect(self.spider_closed,signals.spider_closed)
 
@@ -39,20 +40,33 @@ class AppbrainbotSpider(scrapy.Spider):
 
         print("parse")
         print(response.url)
-        app = response.css(".browse-app-large.safelink.hover-shadow.hidden-xs::attr(href)").extract()
-        print(app)
+        urls = response.css(".title::attr(href)").extract()
+
+        for url in urls:
+
+            self.app_count += 1
+            complete_url = self.site.format(url)
+            print(complete_url)
+            self.app_url.append(complete_url)
+
+            # this is a pretty stupid logical statement to solve it with since we
+            # can scrape the same app twice and therefor land below 1000, but its ok.
+        if self.app_count < 1000:
+            print("parse if else")
+            for category in self.cats:
+                #self.page_count += 1
+                getting_new_urls = self.site.format(category)
+                yield scrapy.Request(url = getting_new_urls, callback = self.parse)
+
 
         for iapp in app:
             print(self.site.format(iapp))
             self.app_count += 1
             yield scrapy.Request(url = self.site.format(iapp).strip(), callback = self.parse_app)
 
-        if self.app_count < 1000:
-            print("parse if else")
-            self.page_count += 1
-            url ="/apps/popular/?o={0}".format(self.page_count * 10)
 
-            yield scrapy.Request(url = self.site.format(url), callback = self.parse)
+
+
 
 
     def parse_app(self, response):

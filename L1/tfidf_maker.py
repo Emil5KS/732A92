@@ -18,9 +18,12 @@ tf_app = TfidfVectorizer()
 
 tf_matrix = tf_app.fit_transform(descriptions)
 
+
 query = "Google mobile surfer"
 query = [process(query)]
+
 query = tf_app.transform(query)
+
 search_result = cosine_similarity(tf_matrix, query)
 
 k = 10
