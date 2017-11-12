@@ -1,15 +1,14 @@
 import json
-from proc_functions import process
+from proc_functions import tf_process
 
-
-with open('app_desc.json', 'r') as myfile:
-    data = json.load(myfile)
+with open('app_desc.json', 'r', encoding="utf-8") as infile:
+    data = json.load(infile)
 
 processed_text = {}
 
-for name,desc in data.items():
-    processed_text[name] = process(desc)
+for name, desc in data.items():
+    processed_text[name] = tf_process(desc)
 
 
-with open("proc_app_desc.json", "w", encoding = "utf-8") as file:
-    json.dump(processed_text, file)
+with open("proc_app_desc.json", "w", encoding="utf-8") as outfile:
+    json.dump(processed_text, outfile)
