@@ -19,8 +19,6 @@ nlp = spacy.load("en", disable=["textcat"])
 
 test = ["Mr. Obama also selected Lisa Jackson to head the Environmental Protection Agency."]
 
-test = ["a", "b", "c"]
-
 # for sentence in read_data(data_file, n=3):
 #     print(sentence)
 
@@ -42,7 +40,8 @@ def extract(doc):
     Yields:
         Pairs of strings representing the extracted relation instances.
     """
-    pattern = re.compile(r'.*\bin\b(?!\b.+ing)')
+    # pattern = re.compile(r'.*\b(head|lead|boss|manag|command|direct|rul)\b(?!\b.+ing).*')
+    pattern = re.compile(r'.*(head|lead|boss|manag|command|direct|rul).*')
 
     person_start = None
     person_end = None
@@ -63,7 +62,7 @@ def extract(doc):
 
         if person_start is not None and org_end is not None:
             words = doc.text.split()
-            relation = " ".join(words[person_start:org_end])
+            relation = " ".join(words[person_end:org_start])
 
             if pattern.match(relation):
                 person = person_label
@@ -79,14 +78,17 @@ def extract(doc):
 
     return pairs
 
+
+
 extracted = set()
 
 for i, doc in enumerate(nlp.pipe(data)):
     entities = extract(doc)
 
-    if entities:
-        for person, org in entities:
-            extracted.add((i, person, org))
+    for person, org in entities:
+        extracted.add((i, person, org))
+
+print(extracted)
 
 gold = set()
 
@@ -94,11 +96,11 @@ for line in gold_data:
     columns = line.rstrip().split('\t')
     gold.add((int(columns[0]), columns[1], columns[2]))
 
-print("Gold")
-print(gold)
+# print("Gold")
+# print(gold)
 
-print("Extracted")
-print(extracted)
+# print("Extracted")
+# print(extracted)
 
 print("Intersection")
 print(extracted.intersection(gold))
@@ -123,7 +125,7 @@ def evaluate(reference, predicted):
     recall = true_positive / (true_positive + false_negative)
     f1 = 2 * precision * recall / (precision + recall)
 
-    return precision, recall, f1
+    return precision * 100, recall * 100, f1 * 100
 
 
 evaluation = evaluate(gold, extracted)
