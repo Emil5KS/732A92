@@ -139,7 +139,6 @@ print(len(extracted_normalised.intersection(gold)))
 evaluation_normalised = evaluate(gold, extracted_normalised)
 print("Precision: %0.2f, Recall: %0.2f, F1-Score: %f0.2f" % evaluation_normalised)
 
-
 with open("../data/extracted.txt", "w") as outfile:
     for i, p, o in extracted:
         outfile.write("%i\t%s\t%s\n" % (i, p, o))
