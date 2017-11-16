@@ -17,8 +17,6 @@ gold_data = read_data(gold_file)
 
 nlp = spacy.load("en", disable=["textcat"])
 
-test = ["Mr. Obama also selected Lisa Jackson to head the Environmental Protection Agency."]
-
 # for sentence in read_data(data_file, n=3):
 #     print(sentence)
 
@@ -62,11 +60,11 @@ def extract(doc):
 
         if person_start is not None and org_end is not None:
             words = doc.text.split()
-            relation = " ".join(words[person_end:org_start])
+            relation = " ".join(words[person_end:org_start]).strip()
 
             if pattern.match(relation):
-                person = person_label
-                organization = org_label
+                person = person_label.strip()
+                organization = org_label.strip()
 
                 if person and organization:
                     pairs.append((person, organization))
@@ -78,8 +76,6 @@ def extract(doc):
 
     return pairs
 
-
-
 extracted = set()
 
 for i, doc in enumerate(nlp.pipe(data)):
@@ -88,26 +84,11 @@ for i, doc in enumerate(nlp.pipe(data)):
     for person, org in entities:
         extracted.add((i, person, org))
 
-print(extracted)
-
 gold = set()
 
 for line in gold_data:
     columns = line.rstrip().split('\t')
     gold.add((int(columns[0]), columns[1], columns[2]))
-
-# print("Gold")
-# print(gold)
-
-# print("Extracted")
-# print(extracted)
-
-print("Intersection")
-print(extracted.intersection(gold))
-
-print(len(gold))
-print(len(extracted))
-print(len(extracted - gold))
 
 def evaluate(reference, predicted):
     """
@@ -128,5 +109,37 @@ def evaluate(reference, predicted):
     return precision * 100, recall * 100, f1 * 100
 
 
+print("Intersection Without Normalisation")
+print(extracted.intersection(gold))
+print(len(extracted.intersection(gold)))
 evaluation = evaluate(gold, extracted)
-print(evaluation)
+print("Precision: %0.2f, Recall: %0.2f, F1-Score: %f0.2f" % evaluation)
+
+def normalise(i, person, org):
+    person_parts = {part.lower() for part in set(person.split())}
+
+    for j, p, o in gold:
+        if j == i:
+            pparts = {part.lower() for part in set(p.split())}
+            intersection = pparts.intersection(person_parts)
+
+            if len(intersection) > 0:
+                return j, p, o
+
+    return i, person, org
+
+extracted_normalised = set()
+
+for element in extracted:
+    extracted_normalised.add(normalise(*element))
+
+print("Intersection With Normalisation")
+print(extracted_normalised.intersection(gold))
+print(len(extracted_normalised.intersection(gold)))
+evaluation_normalised = evaluate(gold, extracted_normalised)
+print("Precision: %0.2f, Recall: %0.2f, F1-Score: %f0.2f" % evaluation_normalised)
+
+
+with open("../data/extracted.txt", "w") as outfile:
+    for i, p, o in extracted:
+        outfile.write("%i\t%s\t%s\n" % (i, p, o))
