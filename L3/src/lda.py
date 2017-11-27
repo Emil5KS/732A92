@@ -1,8 +1,9 @@
 import numpy, random, scipy.special
-
 import matplotlib.pyplot as plt
 
-class MyGibbs(object):    
+from sklearn.preprocessing import normalize
+
+class MyGibbs(object):
     def __init__(self,
                  num_topics,
                  docs_file_name,
@@ -19,10 +20,10 @@ class MyGibbs(object):
                 for line in f:
                     word = line.rstrip()
                     self.stoplist[word] = 1
-        
+
         self.read_documents(docs_file_name)
         self.initialize_matrices()
-        
+
     def initialize_matrices(self):
         """Initializes numpy arrays for the matrix computations performed
         by the sampler during the MCMC process."""
@@ -53,7 +54,7 @@ class MyGibbs(object):
         # print(sum(self.topic_totals))
         # print(sum(self.doc_totals))
 
-    
+
     def read_documents(self, filename):
         """Reads documents from a file, filters stop words and initializes
         the vocabulary. Also converts tokens to integer term IDs."""
@@ -80,7 +81,8 @@ class MyGibbs(object):
                 self.docs.append({ 'tokens': tokens })
 
         self.num_terms = len(self.vocab)
-        print("Read {} documents with a total of {} terms".format(self.num_docs, self.num_terms))                
+        print("Read {} documents with a total of {} terms".format(self.num_docs, self.num_terms))
+
     def make_draw(self, alpha, beta):
         """Makes a single draw from the posterior distribution in an MCMC fashion."""
         for doc_id in range(self.num_docs):
@@ -89,37 +91,40 @@ class MyGibbs(object):
             doc_topics = doc["topics"]
 
             for idx, (token, topic) in enumerate(zip(doc_tokens, doc_topics)):
-                self.term_topics[token][topic] -= 1 
-                self.doc_topics[doc_id][topic] -= 1 
+                self.term_topics[token][topic] -= 1
+                self.doc_topics[doc_id][topic] -= 1
                 self.topic_totals[topic] -= 1
-                
+
                 topic_probs = self._compute_topic_probs(doc_id, token, alpha, beta)
                 new_topic = self._sample_topic(topic_probs)
 
                 doc_topics[idx] = new_topic
-                self.term_topics[token][new_topic] += 1 
-                self.doc_topics[doc_id][new_topic] += 1 
+                self.term_topics[token][new_topic] += 1
+                self.doc_topics[doc_id][new_topic] += 1
                 self.topic_totals[new_topic] += 1
 
+        self.phi = numpy.array(self.term_topics).T
+        self.phi += beta
+        self.phi = normalize(self.phi, axis=1, norm="l1")
+
         return self
-        
+
     def _compute_topic_probs(self, doc, token, alpha, beta):
         probs = [0] * self.num_topics
-        
+
         for topic in range(self.num_topics):
             factor1 = alpha + self.doc_topics[doc][topic]
             factor2 = beta + self.term_topics[token][topic]
-            factor3 = beta * len(self.vocab) + self.topic_totals[topic]            
+            factor3 = beta * len(self.vocab) + self.topic_totals[topic]
             probs[topic] = factor1 * factor2 / factor3
 
         return probs / sum(probs)
 
     def _sample_topic(self, topic_probs):
         return numpy.random.choice(self.num_topics, size=1, p=topic_probs)[0]
-                    
+
     def compute_logprob(self, alpha, beta):
         """Computes the log marginal posterior."""
-        # return super().compute_logprob(alpha, beta)
         K = self.num_topics
         V = len(self.vocab)
         D = self.num_docs
@@ -130,7 +135,7 @@ class MyGibbs(object):
         KA = K * alpha
 
         lg = scipy.special.gammaln
-        
+
         term1 = K * lg(VB)
         term2 = -KV * lg(beta)
 
@@ -143,10 +148,10 @@ class MyGibbs(object):
         for topic in range(K):
             inner_sum = 0
             for word in range(V):
-                inner_sum += self.term_topics[word][topic]             
+                inner_sum += self.term_topics[word][topic]
             term4 += lg(inner_sum + beta)
         term4 *= -1
-        
+
         term5 = D * lg(KA)
         term6 = -DK * lg(alpha)
 
@@ -164,7 +169,7 @@ class MyGibbs(object):
         term8 *= -1
 
         return term1 + term2 + term3 + term4 + term5 + term6 + term7 + term8
-    
+
     def run(self, num_iterations = 50, alpha = 0.1, beta = 0.01):
         self.logprobs = []
 
@@ -173,13 +178,13 @@ class MyGibbs(object):
             logprob = self.compute_logprob(alpha, beta)
             self.logprobs.append(logprob)
             # print("iteration {}, {}".format(iteration, logprob))
-            
+
     def print_topics(self, j):
         """Prints topic distributions for the."""
-        topic_term = numpy.array(self.term_topics).T        
+        topic_term = numpy.array(self.term_topics).T
         for topic in range(self.num_topics):
             print("Topic %i:" % (topic + 1,), end=" ")
-            for word in numpy.argsort(topic_term[topic, :])[::-1][:j]:
+            for word in numpy.argsort(topic_term[topic, :])[-j:]:
                 print(self.vocab[word], end=" ")
             print()
 
@@ -189,6 +194,20 @@ class MyGibbs(object):
         plt.xlabel("# of iterations")
         plt.show()
 
+    def new_speech(self, length):
+        def sample_word(probs):
+            return numpy.random.choice(self.num_terms, size=1, p=probs)[0]
+
+        theta = numpy.random.dirichlet(alpha=[0.5] * self.num_topics)
+        speech = [None] * length
+
+        for i in range(length):
+            topic = self._sample_topics(theta)
+            word = sample_word(self.phi[topic,:])
+            speech[i] = word
+
+        return " ".join(speech)
+
 
 def main():
     dfile = "../data/sotu_1975_2000.txt"
@@ -196,13 +215,13 @@ def main():
     topics = 10
     top_words = 10
     iterations = 10
-    
+
     model = MyGibbs(topics, dfile, swfile)
     model.run(iterations)
 
     model.print_topics(top_words)
     # model.plot()
 
-        
+
 if __name__ == "__main__":
     main()
